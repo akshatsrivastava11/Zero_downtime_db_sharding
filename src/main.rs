@@ -43,10 +43,36 @@ fn main() {
     for _ in 0..100 {
         pre_partition_latency += simulateDbAccess(Arc::clone(&CLUSTER_A), operation::Read);
     }
-    println!(
-        "pre_partition_latency:{}",
-        pre_partition_latency.as_millis()
-    );
+    let avg_pre_latency = pre_partition_latency / 100;
+    println!("Done.\nAverage Read Latency on ClusterA ('mysql1'): {:?}", avg_pre_latency);
     println!("```````````````````````````````````````````");
     println!("\n ##Virtual Partition Validation ");
+    query_linter(&["users", "avatars"]);          
+    // query_linter(&["users", "repositories"]);     
+    transaction_linter(&["repositories", "issues"]); 
+
+    let cutover_time=write_cutover();
+
+    println!("\n## Post-Partitioning Results");
+    println!("Critical Write Downtime (Cutover Duration): {:?}", cutover_time);
+
+    CLUSTER_A.lock().unwrap().latency = Duration::from_millis(20); 
+
+    println!("\n[POST-PARTITION] Simulating 100 reads to Cluster A (Reduced Load)...");
+    let mut post_a_latency = Duration::new(0, 0);
+    for _ in 0..100 {
+        post_a_latency += simulateDbAccess(Arc::clone(&CLUSTER_A), operation::Read);
+    }
+
+    let avg_post_a_latency = post_a_latency / 100;
+    println!("Done.\nNew Average Read Latency on ClusterA: {:?} (reduced from {:?})", avg_post_a_latency, avg_pre_latency);
+    println!("\n[POST-PARTITION] Simulating 100 reads to Cluster B (New Primary)...");
+    let mut post_b_latency = Duration::new(0, 0);
+    for _ in 0..100 {
+        post_b_latency += simulateDbAccess(Arc::clone(&CLUSTER_B), operation::Read);
+    }
+    let avg_post_b_latency = post_b_latency / 100;
+    println!("Done.\nNew Average Read Latency on ClusterB: {:?}", avg_post_b_latency);
+    
+    println!("\nBy vertically partitioning, the load on the original cluster was significantly reduced, lowering the **average access time** (latency) per query and improving overall stability.");
 }
