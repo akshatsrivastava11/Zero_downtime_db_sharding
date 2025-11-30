@@ -9,16 +9,18 @@ pub struct DbCluster {
     pub name: String,
     pub tables: HashSet<String>,
     pub read_only: bool,
+    pub primary:bool,
     pub latency: Duration,
 }
 
 impl DbCluster {
-    pub fn new(name: String, latency: Duration) -> DbCluster {
+    pub fn new(name: String, latency: Duration,primary:bool) -> DbCluster {
         DbCluster {
             name,
             tables: HashSet::new(),
             read_only: false,
             latency: latency,
+            primary:primary
         }
     }
 }
